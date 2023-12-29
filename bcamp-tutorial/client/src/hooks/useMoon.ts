@@ -14,17 +14,17 @@ export const useMoon = () => {
     const initialize = async () => {
         console.log("initializing...")
 
-        const chains: Chain[] = [{
-            chainId: "0x539",
-            chainName: "hardhat",
-            nativeCurrency: {
-                name: "ETH",
-                symbol: "ETH",
-                decimals: 18,
-            },
-            rpcUrls: ['http://127.0.0.1:8545'],
-            blockExplorerUrls:['https://etherscan.io/'],
-        }];
+        // const chains: Chain[] = [{
+        //     chainId: "0x539",
+        //     chainName: "hardhat",
+        //     nativeCurrency: {
+        //         name: "ETH",
+        //         symbol: "ETH",
+        //         decimals: 18,
+        //     },
+        //     rpcUrls: ['http://127.0.0.1:8545'],
+        //     blockExplorerUrls:['https://etherscan.io/'],
+        // }];
 
 		const moonInstance = new MoonSDK({
 			Storage: {
@@ -34,7 +34,7 @@ export const useMoon = () => {
 			Auth: {
 				AuthType: AUTH.JWT,
 			},
-            Networks: chains,
+            // Networks: chains,
 		});
 		setMoon(moonInstance);
 		moonInstance.login();
