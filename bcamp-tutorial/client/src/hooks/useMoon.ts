@@ -6,6 +6,8 @@ import { AccountResponse, CreateAccountInput } from "@moonup/moon-api";
 export const useMoon = () => {
     const [moon, setMoon] = useState<MoonSDK | null>(null);
     const [accounts, setAccounts] = useState<AccountResponse | undefined>();
+    const [selectedWallet, setSelectedWallet] = useState<string>("");
+
     
     useEffect(() => {
         initialize();
@@ -14,17 +16,17 @@ export const useMoon = () => {
     const initialize = async () => {
         console.log("initializing...")
 
-        // const chains: Chain[] = [{
-        //     chainId: "0x539",
-        //     chainName: "hardhat",
-        //     nativeCurrency: {
-        //         name: "ETH",
-        //         symbol: "ETH",
-        //         decimals: 18,
-        //     },
-        //     rpcUrls: ['http://127.0.0.1:8545'],
-        //     blockExplorerUrls:['https://etherscan.io/'],
-        // }];
+        const chains: Chain[] = [{
+            chainId: "80001",
+            chainName: "Mamubai Testnet (Polygon)",
+            nativeCurrency: {
+                name: "MATIC",
+                symbol: "MATIC",
+                decimals: 18,
+            },
+            rpcUrls: [process.env.REACT_APP_POLYGON_MUMBAI_RPC_URL || ""],
+            blockExplorerUrls:['https://mumbai.polygonscan.com/'],
+        }];
 
 		const moonInstance = new MoonSDK({
 			Storage: {
@@ -34,7 +36,7 @@ export const useMoon = () => {
 			Auth: {
 				AuthType: AUTH.JWT,
 			},
-            // Networks: chains,
+            Networks: chains,
 		});
 		setMoon(moonInstance);
 		moonInstance.login();
@@ -82,6 +84,7 @@ export const useMoon = () => {
     const setWallet = (address: string) => {
         if (moon) {
             moon?.getMoonAccount().setWallet(address);
+            setSelectedWallet(address);
         }
 	}
 
@@ -110,7 +113,8 @@ export const useMoon = () => {
         updateToken,
         disconnect,
         getWallet,
-        setWallet
+        setWallet,
+        selectedWallet,
 		// updateAccount
     }
 }

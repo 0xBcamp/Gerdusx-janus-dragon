@@ -10,91 +10,116 @@ interface Account {
 }
 
 const HomePage: React.FC = () => {
-    const { moon, createAccount, disconnect, listAccounts, getWallet, setWallet } = useMoon(); // Use the useMoon hook
+    const { moon, createAccount, disconnect, listAccounts, getWallet, setWallet, selectedWallet } = useMoon(); // Use the useMoon hook
     let navigate = useNavigate();
     const [isLoggedIn, setIsLoggedIn] = React.useState(false);
     const [isLoadingAccounts, setIsLoadingAccounts] = React.useState(true);
     const [isAddingAccount, setIsAddingAccount] = React.useState(false);
+    const [isLoadingAccount, setIsLoadingAccount] = React.useState(false);
     const [accounts, setAccounts] = React.useState<Account[]>([]);
-
-    // const handleDisconnect = async () => {
-    //     await disconnect();
-    //     navigate("/auth/login");
-    // };
+    const [selectedAccount, setSelectedAccount] = React.useState<Account>();
 
     useEffect(() => {
+        console.log("moon", moon);
         if (moon) {
-            setIsLoggedIn(moon.MoonAccount.isAuth);
+            if (moon.MoonAccount.isAuth) {
+                setIsLoggedIn(true);
+                
+                const networks = moon?.getNetworks();
+                if (networks && networks?.length > 0) {
+                    moon?.updateNetwork(networks[0]);
+                }
+            } else {
+                navigate("/auth/login");
+            }
         }
     }, [moon]);
 
     useEffect(() => {
+        if (selectedWallet) {
+            (async () => {
+                setIsLoadingAccount(true);
+                const account = accounts.find((account) => account.key === selectedWallet);
+                setSelectedAccount({
+                    ...account!,
+                    balance: "0"
+                });
+
+                const balance: any = await moon?.getAccountsSDK().getBalance(selectedWallet!, { chainId: moon?.MoonAccount.network.chainId });
+                
+                if (account) {
+                    setSelectedAccount({
+                        ...account!,
+                        balance: balance.data.data.balance
+                    });
+                }
+                setIsLoadingAccount(false);
+            })()
+        }
+    }, [selectedWallet]);
+
+    useEffect(() => {
         if (isLoggedIn) {
             (async () => {
-                setIsLoadingAccounts(true); 
+                setIsLoadingAccounts(true);
                 const accounts = await listAccounts();
-                console.log("isLoggedIn accounts", accounts);
 
                 const accountArray: Account[] = (accounts as any).data.keys?.map((key: any, index: number) => {
                     return {
                         key,
-                        balance: "4"
+                        balance: "0"
                     };
                 });
 
                 setAccounts(accountArray);
-                setIsLoadingAccounts(false); 
-                console.log("accountArray", accountArray);
+                setIsLoadingAccounts(false);
             })();
         }
     }, [isLoggedIn]);
 
-    // useEffect(() => {
-    //     (async () => {
-    //         if (accounts?.length > 0) {
-            
-    //             console.log("accounts", accounts);
-    //             setWallet(accounts[6].key)
-    //             const wallet = getWallet();
-    //             console.log("wallet", wallet);
-    
-    //             const networks = moon?.getNetworks();
-    //             console.log("networks", networks);
-    
-    //             if (networks && networks?.length > 0) {
-    //                 moon?.updateNetwork(networks[0]);
-    //             }
-    //             console.log("moon", moon);
-    
-    //             const balance = await moon?.getAccountsSDK().getBalance(wallet!, { chainId: moon?.MoonAccount.network.chainId });
-    //             console.log("balance", balance)
-    //         }
-    //     })()
-
-    // }, [accounts])
 
     const addAccount = async () => {
-        setIsAddingAccount(true); 
+        setIsAddingAccount(true);
         const acc: any = await createAccount();
-        // const account = await moon?.MoonAccount.addAccount();
-        console.log("acc", acc);
         setAccounts((prevAccounts) => [...prevAccounts, { key: acc.data.data.address, balance: "0" }]);
-        setIsAddingAccount(false); 
+        setIsAddingAccount(false);
     };
 
     return (
         <div className="flex flex-grow h-screen">
-            <div className="w-3/4 p-4">
-                <h1>Welcome to the Home Page</h1>
-                {isLoggedIn ? (
-                    <Button variant="contained" color="primary" onClick={() => disconnect().then(() => navigate("/auth/login"))}>
-                        Disconnect
-                    </Button>
-                ) : (
-                    <Button variant="contained" color="primary" onClick={() => navigate("/auth/login")}>
-                        Login
-                    </Button>
-                )}
+            <div className={`${isLoggedIn ? "w-3/4" : "w-full"} p-4`}>
+                <div className="mt-4 p-4 max-w-sm mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl">
+                    <div className='flex flex-row justify-between items-center border-b border-gray-200 pb-2 min-h-12'>
+                        <div>
+                            Welcome, {moon?.MoonAccount.email}
+                        </div>
+                        <div>
+                            <Button variant="outlined" color="primary" onClick={() => disconnect().then(() => navigate("/auth/login"))}>
+                                Disconnect
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="md:flex">
+                        {isLoggedIn && <div className="p-4">
+                            <div className="uppercase tracking-wide text-sm text-indigo-500 font-semibold">Selected Account</div>
+                            {selectedAccount && !isLoadingAccount && <>
+                                <p className="block mt-1 text-lg leading-tight font-medium text-black">{selectedAccount.key}</p>
+                                <p className="mt-2 text-gray-500">Balance: {selectedAccount.balance}</p>
+                            </>}
+                            {!selectedAccount && !isLoadingAccount && <p className="mt-2 text-gray-500">No Account Selected</p>}
+                            {isLoadingAccount && (
+                                <div className="flex justify-center items-center mt-4">
+                                    <CircularProgress size={24} className="text-blue-500" />
+                                </div>
+                            )}
+                        </div>}
+                        {!isLoggedIn && <div className="flex justify-center items-center mt-4">
+                            <Button variant="contained" color="primary" onClick={() => navigate("/auth/login")}>
+                                Login
+                            </Button>
+                        </div>}
+                    </div>
+                </div>
             </div>
             {isLoggedIn && <div className="w-1/4 p-4 h-full" style={{ boxShadow: '0 0 5px rgba(0, 0, 0, 0.3)' }}>
 
@@ -109,15 +134,21 @@ const HomePage: React.FC = () => {
                 </div>
 
                 {isLoadingAccounts ? (
-                    <div className="flex justify-center items-center pt-4"> 
+                    <div className="flex justify-center items-center pt-4">
                         <CircularProgress size={24} className="text-blue-500" />
                     </div>
                 ) : (
-                    <ul>
+                    <>
                         {accounts.map((account, index) => (
-                            <li key={index}>{account.key}</li>
+                            <div
+                                key={index}
+                                onClick={() => setWallet(account.key)}
+                                className={`${selectedAccount && selectedAccount.key === account.key ? "bg-gray-100": ""} cursor-pointer p-2 my-2 rounded-md shadow hover:bg-gray-200`}
+                            >
+                                {account.key}
+                            </div>
                         ))}
-                    </ul>
+                    </>
                 )}
             </div>}
         </div>

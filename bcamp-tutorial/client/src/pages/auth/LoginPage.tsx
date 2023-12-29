@@ -44,6 +44,8 @@ const LoginPage: React.FC = () => {
 
             const response: any = await auth.emailLogin(request);
             await updateToken(response.data.token, response.data.refreshToken);
+            moon.MoonAccount.setEmail(formData.email);
+            moon.MoonAccount.setExpiry(response.data.expiry);
             navigate("/");
         }
     };
