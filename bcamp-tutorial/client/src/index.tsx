@@ -8,6 +8,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/auth/LoginPage';
 import RedirectPage from './pages/auth/RedirectPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import { ToastContainer, toast } from 'react-toastify';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
 root.render(
   <React.StrictMode>
     <RouterProvider router={router} />
+    <ToastContainer position={toast.POSITION.TOP_RIGHT}/>
   </React.StrictMode>
 );
 
