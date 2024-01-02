@@ -1,4 +1,4 @@
-import { Button, TextField } from '@mui/material';
+import { Button, CircularProgress, TextField } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { EmailLoginInput } from '@moonup/moon-api';
 import { useMoon } from '../../hooks/useMoon';
@@ -7,7 +7,9 @@ import { redirect, useNavigate } from 'react-router-dom';
 const LoginPage: React.FC = () => {
     const { moon, updateToken, connect } = useMoon(); // Use the useMoon hook
     let navigate = useNavigate();
-    
+
+    const [loading, setLoading] = useState(false);
+
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -17,7 +19,7 @@ const LoginPage: React.FC = () => {
     useEffect(() => {
         console.log("moon", moon);
         if (moon?.MoonAccount?.isAuth) {
-            console.log("should redirect") 
+            console.log("should redirect")
             navigate("/");
         }
 
@@ -33,20 +35,27 @@ const LoginPage: React.FC = () => {
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        setLoading(true);
 
-        if (moon) {
-            const auth = moon.getAuthSDK();
+        try {
+            if (moon) {
+                const auth = moon.getAuthSDK();
+                const request: EmailLoginInput = {
+                    email: formData.email,
+                    password: formData.password,
+                }
 
-            const request: EmailLoginInput = {
-                email: formData.email,
-                password: formData.password,
+                const response: any = await auth.emailLogin(request);
+                await updateToken(response.data.token, response.data.refreshToken);
+                moon.MoonAccount.setEmail(formData.email);
+                moon.MoonAccount.setExpiry(response.data.expiry);
+                navigate("/");
             }
-
-            const response: any = await auth.emailLogin(request);
-            await updateToken(response.data.token, response.data.refreshToken);
-            moon.MoonAccount.setEmail(formData.email);
-            moon.MoonAccount.setExpiry(response.data.expiry);
-            navigate("/");
+        } catch (error) {
+            console.error("Login error", error);
+            setLoading(false);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -76,8 +85,13 @@ const LoginPage: React.FC = () => {
                     />
                 </div>
                 <div className="flex justify-center">
-                    <Button type="submit" variant="contained" color="primary">
-                        Login
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        color="primary"
+                        disabled={loading}
+                    >
+                        {loading ? <CircularProgress size={24} /> : 'Login'}
                     </Button>
                 </div>
                 <div className="mt-4 text-center">
