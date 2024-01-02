@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useMoon } from '../hooks/useMoon';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import { ethers } from 'ethers';
 
 interface Account {
     key: string;
@@ -48,9 +49,11 @@ const HomePage: React.FC = () => {
                 const balance: any = await moon?.getAccountsSDK().getBalance(selectedWallet!, { chainId: moon?.MoonAccount.network.chainId });
                 
                 if (account) {
+                    const formattedBalance = ethers.formatUnits(BigInt(balance.data.data.balance), 18);
+                    
                     setSelectedAccount({
                         ...account!,
-                        balance: balance.data.data.balance
+                        balance: formattedBalance
                     });
                 }
                 setIsLoadingAccount(false);
@@ -120,6 +123,7 @@ const HomePage: React.FC = () => {
                         </div>}
                     </div>
                 </div>
+                
             </div>
             {isLoggedIn && <div className="w-1/4 p-4 h-full" style={{ boxShadow: '0 0 5px rgba(0, 0, 0, 0.3)' }}>
 
