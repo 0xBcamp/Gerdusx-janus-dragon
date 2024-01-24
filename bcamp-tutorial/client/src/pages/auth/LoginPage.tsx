@@ -19,10 +19,8 @@ const LoginPage: React.FC = () => {
     useEffect(() => {
         console.log("moon", moon);
         if (moon?.MoonAccount?.isAuth) {
-            console.log("should redirect")
             navigate("/");
         }
-
     }, [moon]);
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

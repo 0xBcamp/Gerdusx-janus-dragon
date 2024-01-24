@@ -1,10 +1,29 @@
 import { Button, TextField } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useMoon } from '../../hooks/useMoon';
+import { useNavigate } from 'react-router-dom';
+import { EmailSignupInput } from '@moonup/moon-api';
 
 const RegisterPage: React.FC = () => {
+    const { moon, updateToken, connect } = useMoon(); // Use the useMoon hook
+    let navigate = useNavigate();
+    
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
+
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (moon?.MoonAccount?.isAuth) {
+            navigate("/");
+        }
+    }, [moon]);
+
+    const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setEmail(event.target.value);
+    };
 
     const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(event.target.value);
@@ -14,13 +33,32 @@ const RegisterPage: React.FC = () => {
         setConfirmPassword(event.target.value);
     };
 
-    const handleRegister = () => {
+    const handleRegister = async () => {
         if (password !== confirmPassword) {
             setPasswordError('Passwords do not match');
         } else {
             // Perform registration logic
             setPasswordError('');
-            console.log("register user")
+            setLoading(true);
+    
+            try {
+                if (moon) {
+                    const auth = moon.getAuthSDK();
+                    const request: EmailSignupInput = {
+                        email: email,
+                        password: password,
+                    }
+    
+                    console.log("request", request)
+                    await auth.emailSignup(request);
+                    navigate("/auth/login");
+                }
+            } catch (error) {
+                console.error("Signup error", error);
+                setLoading(false);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -33,6 +71,8 @@ const RegisterPage: React.FC = () => {
                         label="Email"
                         variant="outlined"
                         fullWidth
+                        value={email}
+                        onChange={handleEmailChange}
                     />
                 </div>
                 <div className="mb-4">
@@ -58,7 +98,7 @@ const RegisterPage: React.FC = () => {
                     />
                 </div>
                 <div className="flex justify-center">
-                    <Button variant="contained" color="primary" onClick={handleRegister}>
+                    <Button variant="contained" color="primary" disabled={loading} onClick={handleRegister}>
                         Register
                     </Button>
                 </div>
