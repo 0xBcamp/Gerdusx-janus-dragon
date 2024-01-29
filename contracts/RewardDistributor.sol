@@ -21,8 +21,9 @@ contract RewardDistributor is Ownable {
         _;
     }
 
-    constructor(address _erc20TokenContract) {
-        erc20TokenContract = ERC20Token(_erc20TokenContract);
+    constructor(address _rewardTokenAddress) {
+        require(_rewardTokenAddress != address(0), "Reward token address cannot be zero");
+        rewardToken = _rewardTokenAddress;
     }
 
     /**
@@ -42,7 +43,7 @@ contract RewardDistributor is Ownable {
      */
     function distributeRewards(address recipient, uint256 amount) external onlyOwner validRecipient(recipient) hasRewardToken {
         require(IERC20(rewardToken).balanceOf(address(this)) >= amount, "Insufficient reward balance");
-        
+
         // Transfer rewards to the recipient
         IERC20(rewardToken).transfer(recipient, amount);
         emit RewardDistributed(recipient, amount);
@@ -55,7 +56,7 @@ contract RewardDistributor is Ownable {
      */
     function distributeRewardsFromERC20TokenContract(address recipient, uint256 amount) external onlyOwner validRecipient(recipient) hasRewardToken {
         require(erc20TokenContract.balanceOf(address(this)) >= amount, "Insufficient reward balance");
-        
+
         // Transfer rewards to the recipient
         erc20TokenContract.transfer(recipient, amount);
         emit RewardDistributed(recipient, amount);
