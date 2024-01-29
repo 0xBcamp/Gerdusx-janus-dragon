@@ -2,33 +2,14 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-// Simplified Ownable contract without requiring initial owner
-contract Ownable {
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    constructor() {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), msg.sender);
-    }
-
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not the owner");
-        _;
-    }
-
-    function transferOwnership(address newOwner) external onlyOwner {
-        require(newOwner != address(0), "Invalid new owner");
-        emit OwnershipTransferred(owner, newOwner);
-        owner = newOwner;
-    }
-}
 
 contract ERC20TokenFactory is Ownable {
 
     event TokenDeployed(address indexed tokenAddress, string name, string symbol, uint8 decimals, uint256 initialSupply);
+
+    constructor() Ownable(msg.sender) {}
 
     /**
      * @dev Deploys a new ERC-20 token contract with provided parameters.
@@ -69,7 +50,7 @@ contract ERC20Token is ERC20, Ownable {
         string memory symbol,
         uint8 decimals,
         uint256 initialSupply
-    ) ERC20(name, symbol) {
+    ) ERC20(name, symbol) Ownable(msg.sender) {
         _mint(msg.sender, initialSupply * (10**decimals));
     }
 }

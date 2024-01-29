@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./ERC20TokenFactory.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RewardDistributor is Ownable {
 
@@ -21,7 +22,7 @@ contract RewardDistributor is Ownable {
         _;
     }
 
-    constructor(address _rewardTokenAddress) {
+    constructor(address _rewardTokenAddress) Ownable(msg.sender) {
         require(_rewardTokenAddress != address(0), "Reward token address cannot be zero");
         rewardToken = _rewardTokenAddress;
     }
