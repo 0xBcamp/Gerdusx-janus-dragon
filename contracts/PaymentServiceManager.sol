@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./IRewardDistributor.sol";
 
 contract PaymentServiceManager is Ownable {
 
@@ -19,7 +20,7 @@ contract PaymentServiceManager is Ownable {
     mapping(uint256 => address) public idToOwner;
 
     uint256 public nextId = 1;
-    uint256 public feePercentage = 10; // 0.1%
+    uint256 public feePercentage = 5; // 0.05%
 
     address public rewardDistributorContract;
 
@@ -44,15 +45,23 @@ contract PaymentServiceManager is Ownable {
         _;
     }
 
-    constructor() Ownable(msg.sender) {}
+    modifier isOwnerOf(address contractAddress) {
+        require(IRewardDistributor(contractAddress).owner() == address(this), "This contract does not own a RewardDistibutor contract");
+        _;
+    }
+
+    constructor(address _rewardDistributorContract) Ownable(msg.sender) {
+        rewardDistributorContract = _rewardDistributorContract;
+    }
 
     /**
      * @dev Registers a new payment service and sets the function caller address as the owner of the payment service 
      */
-    function createPaymentService() external {
+    function createPaymentService(address rewardToken) external isOwnerOf(rewardDistributorContract) {
         uint256 newId = nextId;
         idToOwner[newId] = msg.sender;
         walletToServiceIds[msg.sender].push(newId); // Update the mapping
+        IRewardDistributor(rewardDistributorContract).setRewardToken(newId, rewardToken);
         nextId++;
     }
 
@@ -61,24 +70,29 @@ contract PaymentServiceManager is Ownable {
      * @param id The ID of the payment service 
      * @param amount The Amount of payment token wanted to be sent to the owner of the payment service
      */
-    function pay(uint256 id, uint256 amount) external {
+    function pay(uint256 id, uint256 amount) external isOwnerOf(rewardDistributorContract) {
         require(idToOwner[id] != address(0), "Invalid Payment Service ID");
         RewardParams memory params = rewardParamsById[id];
         address paymentToken = params.paymentToken;
-        require(IERC20(paymentToken).transferFrom(msg.sender, address(this), amount), "Payment transfer failed");
 
         // Calculate and deduct fee
-        uint256 feeAmount = (amount * feePercentage) / 100;
+        uint256 feeAmount = (amount * feePercentage) / 10000;
         uint256 finalAmount = amount - feeAmount;
 
+        require(IERC20(paymentToken).allowance(msg.sender, idToOwner[id]) >= amount, "Address does not have enough allowance");
+        require(IERC20(paymentToken).allowance(msg.sender, address(this)) >= feeAmount, "Address does not have enough allowance");
+
         // Transfer payment (minus fee) to the Payment Service owner
-        IERC20(paymentToken).transfer(owner(), finalAmount);
+        IERC20(paymentToken).transferFrom(msg.sender, idToOwner[id], finalAmount);
+
+        // Transfer fee to address(this)
+        IERC20(paymentToken).transferFrom(msg.sender, address(this), feeAmount);
 
         // Emit event for payment received
         emit PaymentReceived(msg.sender, amount, paymentToken, id);
 
         // Distribute rewards based on the configuration
-        
+        IRewardDistributor(rewardDistributorContract).distributeRewards(id, idToOwner[id], msg.sender, amount * rewardParamsById[id].rewardMultiplier);
     }
 
     /**
@@ -87,8 +101,9 @@ contract PaymentServiceManager is Ownable {
      * @param paymentToken The new Payment Token address
      * @param rewardMultiplier The amount of Reward tokens distibuted per payment token paid
      */
-    function setRewardParams(uint256 id, address paymentToken, uint256 rewardMultiplier) external onlyPaymentServiceOwner(id) validPaymentToken(paymentToken) validRewardMultiplier(rewardMultiplier) {
+    function setRewardParams(uint256 id, address paymentToken, uint256 rewardMultiplier, address rewardToken) external onlyPaymentServiceOwner(id) validPaymentToken(paymentToken) validRewardMultiplier(rewardMultiplier) isOwnerOf(rewardDistributorContract) {
         rewardParamsById[id] = RewardParams(paymentToken, rewardMultiplier);
+        IRewardDistributor(rewardDistributorContract).setRewardToken(id, rewardToken);
         emit RewardParamsSet(id, paymentToken, rewardMultiplier);
     }
 
@@ -125,5 +140,18 @@ contract PaymentServiceManager is Ownable {
 
         idToOwner[id] = newOwner;
         emit OwnershipTransferred(currentOwner, newOwner);
+    }
+
+    function withdrawFees(uint256 id) external onlyOwner {
+        require(idToOwner[id] != address(0), "Payment service is not set");
+
+        address paymentToken = rewardParamsById[id].paymentToken;
+        require(paymentToken != address(0), "Payment token does not exist");
+
+        if(IERC20(paymentToken).allowance(address(this), owner()) < IERC20(paymentToken).balanceOf(address(this))) {
+            IERC20(paymentToken).approve(owner(), IERC20(paymentToken).balanceOf(address(this)));
+        }
+
+        IERC20(paymentToken).transfer(owner(), IERC20(paymentToken).balanceOf(address(this)));
     }
 }

@@ -3,11 +3,11 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-
+import "./ERC20Token.sol";
 
 contract ERC20TokenFactory is Ownable {
 
-    event TokenDeployed(address indexed tokenAddress, string name, string symbol, uint8 decimals, uint256 initialSupply);
+    event TokenDeployed(address indexed tokenAddress, string name, string symbol, uint256 initialSupply);
 
     constructor() Ownable(msg.sender) {}
 
@@ -15,18 +15,16 @@ contract ERC20TokenFactory is Ownable {
      * @dev Deploys a new ERC-20 token contract with provided parameters.
      * @param name The name of the token.
      * @param symbol The symbol of the token.
-     * @param decimals The number of decimals for the token.
      * @param initialSupply The initial supply of the token.
      * @return The address of the deployed ERC-20 token contract.
      */
     function deployToken(
         string memory name,
         string memory symbol,
-        uint8 decimals,
         uint256 initialSupply
-    ) external onlyOwner returns (address) {
-        ERC20Token newToken = new ERC20Token(name, symbol, decimals, initialSupply);
-        emit TokenDeployed(address(newToken), name, symbol, decimals, initialSupply);
+    ) external returns (address) {
+        ERC20Token newToken = new ERC20Token(msg.sender, name, symbol, initialSupply);
+        emit TokenDeployed(address(newToken), name, symbol, initialSupply);
         return address(newToken);
     }
 
@@ -36,21 +34,9 @@ contract ERC20TokenFactory is Ownable {
      * @param symbol The symbol of the token.
      * @return The address of the deployed ERC-20 token contract.
      */
-    function deployTokenDefault(string memory name, string memory symbol) external onlyOwner returns (address) {
-        ERC20Token newToken = new ERC20Token(name, symbol, 18, 0);
-        emit TokenDeployed(address(newToken), name, symbol, 18, 0);
+    function deployTokenDefault(string memory name, string memory symbol) external returns (address) {
+        ERC20Token newToken = new ERC20Token(msg.sender, name, symbol, 0);
+        emit TokenDeployed(address(newToken), name, symbol, 0);
         return address(newToken);
-    }
-}
-
-contract ERC20Token is ERC20, Ownable {
-
-    constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals,
-        uint256 initialSupply
-    ) ERC20(name, symbol) Ownable(msg.sender) {
-        _mint(msg.sender, initialSupply * (10**decimals));
     }
 }
