@@ -46,7 +46,9 @@ contract RewardDistributor is Ownable {
         require(IERC20(idToRewardToken[id]).allowance(sender, address(this)) >= amount, "Sender does not have enough allowance");
 
         // Transfer rewards to address(this)
-        IERC20(idToRewardToken[id]).transferFrom(sender, address(this), amount);
+        bool success = IERC20(idToRewardToken[id]).transferFrom(sender, address(this), amount);
+
+        if(!success) revert();
 
         // Transfer rewards to recipient
         if(IERC20(idToRewardToken[id]).allowance(address(this), recipient) < amount) {

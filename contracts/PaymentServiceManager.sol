@@ -9,6 +9,7 @@ contract PaymentServiceManager is Ownable {
 
     event PaymentReceived(address indexed payer, uint256 amount, address paymentToken, uint256 serviceId);
     event RewardParamsSet(uint256 indexed id, address paymentToken, uint256 rewardMultiplier);
+    event newFeePercentageSet(uint256 newFeePercentage);
 
     struct RewardParams {
         address paymentToken;
@@ -51,18 +52,19 @@ contract PaymentServiceManager is Ownable {
     }
 
     constructor(address _rewardDistributorContract) Ownable(msg.sender) {
+        require(_rewardDistributorContract != address(0), "Null address for reward distributor contract is not acceptable");
         rewardDistributorContract = _rewardDistributorContract;
     }
 
     /**
      * @dev Registers a new payment service and sets the function caller address as the owner of the payment service 
      */
-    function createPaymentService(address rewardToken) external isOwnerOf(rewardDistributorContract) {
-        uint256 newId = nextId;
+    function createPaymentService(address rewardToken) external isOwnerOf(rewardDistributorContract) returns (uint256 newId) {
+        newId = nextId;
         idToOwner[newId] = msg.sender;
         walletToServiceIds[msg.sender].push(newId); // Update the mapping
-        IRewardDistributor(rewardDistributorContract).setRewardToken(newId, rewardToken);
         nextId++;
+        IRewardDistributor(rewardDistributorContract).setRewardToken(newId, rewardToken);
     }
 
     /**
@@ -83,10 +85,14 @@ contract PaymentServiceManager is Ownable {
         require(IERC20(paymentToken).allowance(msg.sender, address(this)) >= feeAmount, "Address does not have enough allowance");
 
         // Transfer payment (minus fee) to the Payment Service owner
-        IERC20(paymentToken).transferFrom(msg.sender, idToOwner[id], finalAmount);
+        bool success = IERC20(paymentToken).transferFrom(msg.sender, idToOwner[id], finalAmount);
+
+        if (!success) revert();
 
         // Transfer fee to address(this)
-        IERC20(paymentToken).transferFrom(msg.sender, address(this), feeAmount);
+        success = IERC20(paymentToken).transferFrom(msg.sender, address(this), feeAmount);
+
+        if (!success) revert();
 
         // Emit event for payment received
         emit PaymentReceived(msg.sender, amount, paymentToken, id);
@@ -113,6 +119,7 @@ contract PaymentServiceManager is Ownable {
      */
     function setFeePercentage(uint256 newFeePercentage) external onlyOwner validFeePercentage(newFeePercentage) {
         feePercentage = newFeePercentage;
+        emit newFeePercentageSet(newFeePercentage);
     }
 
     /**
@@ -152,6 +159,8 @@ contract PaymentServiceManager is Ownable {
             IERC20(paymentToken).approve(owner(), IERC20(paymentToken).balanceOf(address(this)));
         }
 
-        IERC20(paymentToken).transfer(owner(), IERC20(paymentToken).balanceOf(address(this)));
+        bool success = IERC20(paymentToken).transfer(owner(), IERC20(paymentToken).balanceOf(address(this)));
+
+        if (!success) revert();
     }
 }
