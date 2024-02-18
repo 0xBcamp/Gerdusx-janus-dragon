@@ -26,7 +26,7 @@ contract PaymentServiceManager is Ownable {
     address public rewardDistributorContract;
 
     modifier onlyPaymentServiceOwner(uint256 id) {
-        require(owner() == idToOwner[id], "Not the owner of this Payment Service");
+        require(msg.sender == idToOwner[id], "Not the owner of this Payment Service");
         _;
     }
 
@@ -57,7 +57,8 @@ contract PaymentServiceManager is Ownable {
     }
 
     /**
-     * @dev Registers a new payment service and sets the function caller address as the owner of the payment service 
+     * @dev Registers a new payment service and sets the function caller address as the owner of the payment service
+     * @param rewardToken The address of the reward token for the new payment service
      */
     function createPaymentService(address rewardToken) external isOwnerOf(rewardDistributorContract) returns (uint256 newId) {
         newId = nextId;
@@ -106,6 +107,7 @@ contract PaymentServiceManager is Ownable {
      * @param id The ID of the payment service
      * @param paymentToken The new Payment Token address
      * @param rewardMultiplier The amount of Reward tokens distibuted per payment token paid
+     * @param rewardToken The new Reward Tokens address
      */
     function setRewardParams(uint256 id, address paymentToken, uint256 rewardMultiplier, address rewardToken) external onlyPaymentServiceOwner(id) validPaymentToken(paymentToken) validRewardMultiplier(rewardMultiplier) isOwnerOf(rewardDistributorContract) {
         rewardParamsById[id] = RewardParams(paymentToken, rewardMultiplier);
@@ -127,9 +129,9 @@ contract PaymentServiceManager is Ownable {
      * @param id The ID of the payment service
      * @param newOwner The address of the new owner of the payment service
      */
-    function transferOwnership(uint256 id, address newOwner) external onlyPaymentServiceOwner(id) {
+    function transferServiceOwnership(uint256 id, address newOwner) external onlyPaymentServiceOwner(id) {
         require(newOwner != address(0), "Invalid new owner address");
-        address currentOwner = owner();
+        address currentOwner = idToOwner[id];
         transferOwnership(newOwner);
         
         // Remove the current service ID from the old owner's array
@@ -149,6 +151,10 @@ contract PaymentServiceManager is Ownable {
         emit OwnershipTransferred(currentOwner, newOwner);
     }
 
+    /**
+     * @dev Withdraws all fees from a specific payment service
+     * @param id The ID of the payment service
+     */
     function withdrawFees(uint256 id) external onlyOwner {
         require(idToOwner[id] != address(0), "Payment service is not set");
 
