@@ -134,13 +134,11 @@ describe('PaymentServiceManager', () => {
 
         expect(await newOwner).to.equal(payerOrRewardRecipient.address);
 
-        const oldOwnerServiceIds = await paymentServiceManager.walletToServiceIds(await owner.address, String(0));
-        expect(await oldOwnerServiceIds).to.deep.equal(null);
+        const oldOwnerServiceIds = await paymentServiceManager.getServiceIds(owner.address);
+        expect(await oldOwnerServiceIds).to.be.an("array").that.is.empty;
 
-        console.log('b0');
-
-        const newOwnerServiceIds = await paymentServiceManager.walletToServiceIds(await payerOrRewardRecipient.address);
-        expect(await newOwnerServiceIds[0]).to.deep.equal(serviceId);
+        const newOwnerServiceIds = await paymentServiceManager.getServiceIds(await payerOrRewardRecipient.address);
+        expect(await newOwnerServiceIds[0]).to.equal(serviceId);
     });
 
     it('should withdraw fees correctly', async () => {

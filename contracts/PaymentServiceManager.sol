@@ -56,6 +56,11 @@ contract PaymentServiceManager is Ownable {
         rewardDistributorContract = _rewardDistributorContract;
     }
 
+    function getServiceIds(address wallet) public view returns (uint256[] memory ids){
+        ids = walletToServiceIds[wallet];
+        return ids;
+    }
+
     /**
      * @dev Registers a new payment service and sets the function caller address as the owner of the payment service
      * @param rewardToken The address of the reward token for the new payment service
